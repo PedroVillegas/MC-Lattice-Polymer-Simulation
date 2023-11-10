@@ -33,11 +33,18 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
     w[0] += weight[0];
     Site site { 0,0 };
     path.push_back(site);
+    uint32_t max_growth = 1;
 
     while (tours < max_tours)
     {
         // If maximal length has been reached or the atmosphere is zero: Dont grow.
-        if (spine == max_size || atmosphere == 0)
+        if (s[Index(MS,max_growth-1,0)] == max_growth * max_tours / max_size)
+        {       
+            max_growth++;
+            std::cout << max_growth * max_tours << std::endl;
+            std::cout << max_growth << std::endl;
+        }
+        if (spine == max_growth || atmosphere == 0)
         {
             copy[n] = 0;
             // std::cout << "path: " << std::endl;
@@ -102,6 +109,7 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
             site = Site { 0,0 };
             path.clear();
             path.push_back(site);
+            max_growth = 1;
         }
         else
         {
@@ -171,15 +179,15 @@ int main()
 {
     std::srand(time(0));
 
-    std::string outputSamplesCurrent    = "../data/cactus_saw_samples.ser";
-    std::string outputCountsCurrent     = "../data/cactus_saw_est.ser";
-    std::string outputSamplesBest       = "../data/cactus_saw_best_samples.ser";
-    std::string outputCountsBest        = "../data/cactus_saw_best_est.ser";
+    std::string outputSamplesCurrent    = "../data/cactus/cactus_saw_samples.ser";
+    std::string outputCountsCurrent     = "../data/cactus/cactus_saw_est.ser";
+    std::string outputSamplesBest       = "../data/cactus/cactus_saw_best_samples.ser";
+    std::string outputCountsBest        = "../data/cactus/cactus_saw_best_est.ser";
 
     SAW_Analysis cactusSAW;
     
     uint32_t MS = 10;
-    uint32_t MT = 200;
+    uint32_t MT = 10000;
     std::cout << "Running flatPERM Algorithm with Max Size { " << MS << " } and Max Tours { " << MT << " }.\n";
     auto start = std::chrono::high_resolution_clock::now();
     cactusSAW = FlatPERM_CactusSAW(MS, MT);

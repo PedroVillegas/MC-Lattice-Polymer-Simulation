@@ -145,10 +145,10 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
 int main()
 {
 
-    std::string outputSamplesCurrent    = "../data/interacting_saw_samples.ser";
-    std::string outputCountsCurrent     = "../data/interacting_saw_est.ser";
-    std::string outputSamplesBest       = "../data/interacting_saw_best_samples.ser";
-    std::string outputCountsBest        = "../data/interacting_saw_best_est.ser";
+    std::string outputSamplesCurrent    = "../data/interacting/interacting_saw_samples.ser";
+    std::string outputCountsCurrent     = "../data/interacting/interacting_saw_est.ser";
+    std::string outputSamplesBest       = "../data/interacting/interacting_saw_best_samples.ser";
+    std::string outputCountsBest        = "../data/interacting/interacting_saw_best_est.ser";
 
     std::srand(time(0));
 
