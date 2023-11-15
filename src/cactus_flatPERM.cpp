@@ -33,31 +33,13 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
     w[0] += weight[0];
     Site site { 0,0 };
     path.push_back(site);
-    uint32_t max_growth = 1;
+    uint32_t max_growth = 0;
 
     while (tours < max_tours)
     {
-        // If maximal length has been reached or the atmosphere is zero: Dont grow.
-        if (s[Index(MS,max_growth-1,0)] == max_growth * max_tours / max_size)
-        {       
-            max_growth++;
-            std::cout << max_growth * max_tours << std::endl;
-            std::cout << max_growth << std::endl;
-        }
-        if (spine == max_growth || atmosphere == 0)
+        if (spine == std::min(max_growth + 1, max_size) || atmosphere == 0)
         {
             copy[n] = 0;
-            // std::cout << "path: " << std::endl;
-            // for (auto& s : path) 
-            // { 
-            //     std::cout << s.x << " " << s.y << std::endl; 
-            // }
-            // std::cout << "path[-3]: ";
-            // std::cout << path[path.size()-3].x << " " << path[path.size()-3].y << std::endl;
-            // std::cout << "site: ";
-            // std::cout << site.x << " " << site.y << std::endl;
-            // std::cout << "Spine, M: " << spine << ", " << m << std::endl;
-            // std::cout << std::endl;
         }
         else
         {
@@ -97,10 +79,15 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
 
         if (n == 0 && copy[0] == 0)
         {
-            if (tours % 1000 == 0)
-                std::cout << "Tour " << tours << " / " << max_tours << std::endl;
             // Start new tour.
             tours += 1;
+            if (tours % 500 == 0)
+            {
+                std::cout << "Tour " << tours << " / " << max_tours << std::endl;
+                std::cout << tours << " tours ran with spine length " << std::min(max_growth + 1, max_size) << "\n";
+                max_growth++;
+            }
+                
             // Start new walk with step size zero.
             atmosphere = 1;
             copy[0] = 1;
@@ -109,7 +96,6 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
             site = Site { 0,0 };
             path.clear();
             path.push_back(site);
-            max_growth = 1;
         }
         else
         {
@@ -137,8 +123,7 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
             {
                 copy[n] -= 1;
                 // Randomly select element from emptyNeighbours
-                uint8_t random_index = std::floor(Randf01() * atmosphere);
-                site = emptyNeighbours[random_index];
+                site = emptyNeighbours[std::floor(Randf01() * atmosphere)];
                 path.push_back(site);
                 spine++;
                 n++;
@@ -149,7 +134,6 @@ SAW_Analysis FlatPERM_CactusSAW(uint32_t max_size, uint32_t max_tours)
                     if (site == path.end()[-3])
                     {
                         // Spike has formed, add to list of spikes and adjust the spine accordingly
-                        // std::cout << "Spiked\n";
                         spikes.push_back(path.end()[-2]);
                         spikes.push_back(path.end()[-1]);
                         m += 1;
@@ -186,8 +170,8 @@ int main()
 
     SAW_Analysis cactusSAW;
     
-    uint32_t MS = 10;
-    uint32_t MT = 10000;
+    uint32_t MS = 50;
+    uint32_t MT = 100000;
     std::cout << "Running flatPERM Algorithm with Max Size { " << MS << " } and Max Tours { " << MT << " }.\n";
     auto start = std::chrono::high_resolution_clock::now();
     cactusSAW = FlatPERM_CactusSAW(MS, MT);
@@ -197,8 +181,8 @@ int main()
     std::cout << "\n";
 
     // Only update 'best' data files when more samples AND longer walks have been evaluated
-    if (MT > GetMaxSampleSizeFromFile(outputSamplesBest) && 
-        MS + 1 > GetMaxWalkLengthFromFile(outputCountsBest))
+    if (MT >= GetMaxSampleSizeFromFile(outputSamplesBest) && 
+        MS + 1 >= GetMaxWalkLengthFromFile(outputCountsBest))
     {
         std::cout << "New best data generated, updating records...\n";
         WriteDataToFile(outputSamplesBest, cactusSAW.samples, MS + 1);
