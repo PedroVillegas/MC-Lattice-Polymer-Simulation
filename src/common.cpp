@@ -10,7 +10,7 @@ uint32_t Index(uint32_t width, uint32_t row_idx, uint32_t col_idx)
 
 float Randf01()
 {
-    return ((double)std::rand()) / RAND_MAX;
+    return ((double)std::rand()) / (double)RAND_MAX;
 }
 
 Site GetNeighbour(Site site, Step step)

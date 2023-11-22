@@ -1,13 +1,10 @@
 #include "common.h"
 
 
-SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
+SAW_Analysis FlatPERMInteractingSAW(const int32_t maxSize, const uint32_t maxTours)
 {
-    const uint32_t MS  = max_size + 1;
+    const uint32_t MS  = maxSize + 1;
     const uint32_t MS2 = MS * MS;
-
-    std::cout << "MS, MS2: " << MS << ", " << MS2 << std::endl;
-    std::cout << "Max Tours: " << max_tours << std::endl;
 
     // We can use a 1D vector of size MS2 and access [row][col] via std::vector[width * row_idx + col_idx]
     std::vector<double>                 s(MS2, 0.f);
@@ -23,26 +20,31 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
     uint32_t m = 0;
 
     // Initialize walk at origin
-    uint8_t atmosphere = 1;
+    Site site { 0,0 };
+    path.push_back(site);
     copy[0] = 1;
     weight[0] = 1;
     s[0] += 1.f;
     w[0] += weight[0];
-    Site site { 0,0 };
-    path.push_back(site);
+    uint8_t atmosphere = 1;
+    uint32_t lengthToGrowTo = 0;
+    const uint32_t growthConstant = 5000;
 
-    while (tours < max_tours)
+    while (tours < maxTours)
     {
-        // # If maximal length has been reached or the atmosphere is zero: Dont grow.
-        if (n == max_size || atmosphere == 0)
+        // If maximal length has been reached or the atmosphere is zero: Dont grow
+        if (n == std::min(lengthToGrowTo, maxSize) || atmosphere == 0)
         {
             copy[n] = 0;
         }
         else
         {
-            // Pruning/enrichment by comparing the target weight with the averaged weight estimate.
-            float w_nm = w[Index(MS,n,m)];
-            float ratio = weight[n] / (w_nm / s[0]);
+            // Pruning/enrichment by comparing the target weight with the normalized weight estimate
+            double w_nm = w[Index(MS,n,m)];
+            // We only want to normalize w_sm by the number of tours that had a max walk length of min(lengthToGrowTo, maxSize)
+            double tours_s = (n == maxSize ? tours+1 - (growthConstant * maxSize) : tours+1 % growthConstant);
+            double normalizedWeight = (w_nm / tours_s);
+            float ratio = weight[n] / normalizedWeight;
             float p = std::fmod(ratio, 1.f);
             float r = Randf01();
             // Generate a random number between 0 and 1
@@ -50,7 +52,7 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
                 copy[n] = std::floor(ratio) + 1;
             else
                 copy[n] = std::floor(ratio);
-            weight[n] = w_nm / s[0];
+            weight[n] = normalizedWeight;
         }
 
         if (copy[n] == 0)
@@ -58,13 +60,13 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
             while (n > 0 && copy[n] == 0)
             {
                 // Delete interactions before retracing a step since interactions are
-                // recorded after each next step is taken.
+                // recorded after each next step is taken
                 if (interactions[n] > 0)
                 {
                     m -= interactions[n];
                     interactions[n] = 0;
                 }
-                // Delete last site of walk.
+                // Delete last site of walk
                 path.pop_back(); 
                 site = path.back();
                 n -= 1;
@@ -73,46 +75,56 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
 
         if (n == 0 && copy[0] == 0)
         {
-            if (tours % 1000 == 0)
-                std::cout << "Tour " << tours << " / " << max_tours << std::endl;
             // Start new tour.
             tours += 1;
-            // Start new walk with step size zero.
-            atmosphere = 1;
-            copy[0] = 1;
-            s[0] += 1;
-            w[0] += weight[0];
+            if (tours % growthConstant == 0)
+            {
+                std::cout << "Tour " << tours << " / " << maxTours << std::endl;
+                std::cout << tours << " tours ran with length " << std::min(lengthToGrowTo + 1, maxSize) << "\n";
+                lengthToGrowTo++;
+            }
+            // Start new walk with step size zero
             site = Site { 0,0 };
             path.clear();
             path.push_back(site);
+            copy[0] = 1;
+            s[0] += 1;
+            w[0] += weight[0];
+            atmosphere = 1;
         }
         else
         {
             emptyNeighbours.clear();
-            // Create list of neighboring unoccupied sites, determine the atmosphere a.
-            for (Step& step : STEPS)
+            // Create list of neighboring unoccupied sites, determine the atmosphere a
+            for (auto& step : STEPS)
             {
-                Site new_step = GetNeighbour(site, step);
-                // std::find returns path.end() if new_step is not found
-                if (std::find(path.begin(), path.end()-1, new_step) == path.end()-1)
+                Site newStep = GetNeighbour(site, step);
+
+                if (path.size() < 1)
                 {
-                    // path does not contain new_step
-                    emptyNeighbours.push_back(new_step);
+                    emptyNeighbours.push_back(newStep);
+                    continue;
+                }
+                // std::find returns path.end() if newStep is not found
+                if (std::find(path.begin(), path.end()-1, newStep) == path.end()-1)
+                {
+                    // path does not contain newStep
+                    emptyNeighbours.push_back(newStep);
                 }
             }
 
             atmosphere = emptyNeighbours.size();
-            // If the walk cannot continue, reject entire walk and exit loop.
+            // If the walk cannot continue, reject entire walk and exit loop
             if (atmosphere > 0)
             {
                 copy[n] -= 1;
                 // Randomly select element from emptyNeighbours
-                uint8_t random_index = std::floor(Randf01() * atmosphere);
+                uint8_t random_index = rand() % atmosphere;
                 site = emptyNeighbours[random_index];
                 path.push_back(site);
-                n++;
+                n += 1;
                 // Check for interactions between new site and all other visited sites, ignore
-                // the last 2 steps before new site.
+                // the last 2 steps before new site
 
                 for (uint32_t i = 0; i < path.size()-2; i++)
                 {
@@ -134,11 +146,18 @@ SAW_Analysis FlatPERMInteractingSAW(uint32_t max_size, uint32_t max_tours)
     s[0] -= 1.f;
     w[0] -= 1.f;
 
+    n = 0;
     for (uint32_t i = 0; i < MS2; i++)
     {
-        w[i] /= s[0];
+        if (i % MS == 0)
+            n++;
+        
+        if (n < 2)
+            w[i] /= s[0];
+        else
+            w[i] /= s[0] - (growthConstant * n);
     }
-
+    
     return SAW_Analysis { s, w };
 }
 
@@ -154,8 +173,14 @@ int main()
 
     SAW_Analysis interactingSAW;
     
-    uint32_t MS = 100;
-    uint32_t MT = 100;
+    uint32_t MS;
+    uint32_t MT;
+
+    std::cout << "Max Length: ";
+    std::cin >> MS;
+    std::cout << "Max Tours: ";
+    std::cin >> MT;
+
     std::cout << "Running flatPERM Algorithm with Max Size { " << MS << " } and Max Tours { " << MT << " }.\n";
     auto start = std::chrono::high_resolution_clock::now();
     interactingSAW = FlatPERMInteractingSAW(MS, MT);
@@ -165,8 +190,8 @@ int main()
     std::cout << "\n";
 
     // Only update 'best' data files when more samples AND longer walks have been evaluated
-    if (MT > GetMaxSampleSizeFromFile(outputSamplesBest) && 
-        MS + 1 > GetMaxWalkLengthFromFile(outputCountsBest))
+    if (MT >= GetMaxSampleSizeFromFile(outputSamplesBest) && 
+        MS + 1 >= GetMaxWalkLengthFromFile(outputCountsBest))
     {
         std::cout << "New best data generated, updating records...\n";
         WriteDataToFile(outputSamplesBest, interactingSAW.samples, MS + 1);

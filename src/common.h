@@ -19,7 +19,7 @@ struct Step
     int dx;
     int dy;
 
-    bool operator == (const Step &other) const 
+    bool operator == (const Step& other) const 
     {
         return dx == other.dx && dy == other.dy;
     }
@@ -30,7 +30,7 @@ struct Site
     int x;
     int y;
 
-    bool operator == (const Site &other) const 
+    bool operator == (const Site& other) const 
     {
         return x == other.x && y == other.y;
     }
