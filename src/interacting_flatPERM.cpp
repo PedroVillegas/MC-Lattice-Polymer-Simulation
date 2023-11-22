@@ -33,7 +33,7 @@ SAW_Analysis FlatPERMInteractingSAW(const int32_t maxSize, const uint32_t maxTou
     while (tours < maxTours)
     {
         // If maximal length has been reached or the atmosphere is zero: Dont grow
-        if (n == std::min(lengthToGrowTo, maxSize) || atmosphere == 0)
+        if (n == std::min(lengthToGrowTo + 1, maxSize) || atmosphere == 0)
         {
             copy[n] = 0;
         }
